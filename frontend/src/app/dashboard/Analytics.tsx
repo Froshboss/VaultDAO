@@ -3,7 +3,6 @@ import type { AnalyticsTimeRange, ActivityLike } from '../../types/analytics';
 import { aggregateAnalytics } from '../../utils/analyticsAggregation';
 import { exportAnalyticsToCsv, exportChartAsImage } from '../../utils/exportAnalytics';
 import LineChart from '../../components/charts/LineChart';
-import BarChart from '../../components/charts/BarChart';
 import PieChart from '../../components/charts/PieChart';
 import HeatMap from '../../components/charts/HeatMap';
 import {
@@ -28,7 +27,6 @@ function getMockActivities(): ActivityLike[] {
   const recipients = ['GDEF...ABC1', 'GHIJ...DEF2', 'GKLM...GHI3'];
   for (let i = 0; i < 30; i++) {
     const d = new Date(now - (29 - i) * day);
-    const dateStr = d.toISOString().slice(0, 10);
     if (i % 3 === 0) {
       activities.push({
         id: `c-${i}`,
@@ -79,7 +77,7 @@ const TIME_RANGES: { value: AnalyticsTimeRange; label: string }[] = [
 
 const Analytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>('30d');
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const proposalChartRef = useRef<HTMLDivElement>(null);
   const spendingChartRef = useRef<HTMLDivElement>(null);
   const treasuryChartRef = useRef<HTMLDivElement>(null);
@@ -268,7 +266,7 @@ const Analytics: React.FC = () => {
               className="bg-gray-800 rounded-xl border border-gray-700 p-4 md:p-5"
             >
               <LineChart
-                data={analytics.proposalTrends}
+                data={analytics.proposalTrends as Record<string, unknown>[]}
                 xKey="date"
                 series={[
                   { dataKey: 'created', name: 'Created', color: '#818cf8' },
@@ -297,7 +295,7 @@ const Analytics: React.FC = () => {
               className="bg-gray-800 rounded-xl border border-gray-700 p-4 md:p-5 md:col-span-2 xl:col-span-1"
             >
               <LineChart
-                data={analytics.treasuryBalance}
+                data={analytics.treasuryBalance as Record<string, unknown>[]}
                 xKey="date"
                 series={[{ dataKey: 'total', name: 'Cumulative volume', color: '#8b5cf6' }]}
                 height={280}

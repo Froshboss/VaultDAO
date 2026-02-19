@@ -78,10 +78,10 @@ const PieChart: React.FC<PieChartProps> = ({
               border: '1px solid #374151',
               borderRadius: '8px',
             }}
-            formatter={(value: number, name: string, props: { payload?: { count?: number; percent?: string } }) => [
+            formatter={(value: number | undefined, name: string, props: { payload?: { count?: number; percent?: string } }) => [
               showCount && props.payload?.count != null
-                ? `${value} (${props.payload.count} tx)`
-                : value,
+                ? `${value ?? 0} (${props.payload.count} tx)`
+                : value ?? 0,
               name,
             ]}
           />
@@ -90,7 +90,8 @@ const PieChart: React.FC<PieChartProps> = ({
             formatter={(value, entry) => (
               <span className="text-gray-400">
                 {value}
-                {entry?.payload?.percent != null && ` (${entry.payload.percent}%)`}
+                {(entry?.payload as { percent?: string } | undefined)?.percent != null &&
+                  ` (${(entry.payload as { percent: string }).percent}%)`}
               </span>
             )}
           />

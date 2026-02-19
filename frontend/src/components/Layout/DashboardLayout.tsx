@@ -15,6 +15,7 @@ const DashboardLayout: React.FC = () => {
     const navItems = [
         { label: 'Overview', path: '/dashboard', icon: LayoutDashboard },
         { label: 'Proposals', path: '/dashboard/proposals', icon: FileText },
+        { label: 'Analytics', path: '/dashboard/analytics', icon: BarChart3 },
         { label: 'Settings', path: '/dashboard/settings', icon: Settings },
     ];
 
