@@ -56,7 +56,11 @@ const Proposals: React.FC = () => {
     const userRole = 'Admin'; // or 'Treasurer' or 'None'
 
     const canRejectProposal = (proposal: Proposal): boolean => {
-        if (!isConnected || !address) return false;
+        if (!isConnected || !address) {
+            // For demo purposes, allow rejection even without wallet connection
+            // In production, this should return false
+            return true;
+        }
         // User can reject if they are the proposer or an admin
         return proposal.proposer === address || userRole === 'Admin';
     };
