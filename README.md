@@ -107,6 +107,20 @@ cargo test
 
 ---
 
+## 📦 SDK & Developer Integration
+
+Integrate VaultDAO into your own application using the official TypeScript SDK.
+
+```bash
+npm install @vaultdao/sdk
+```
+
+- **API Reference**: [docs/API.md](docs/API.md)
+- **SDK README**: [sdk/README.md](sdk/README.md)
+- **Usage examples**: [`sdk/examples/`](sdk/examples/)
+
+---
+
 ## 🌊 Stellar Drips Wave
 
 We are actively participating in the **Stellar Community Drips Wave**. We welcome developers to help us build the future of Stellar treasury management!
