@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Proposal } from '../hooks/useVaultContract';
+import type { Proposal } from './type';
 import { formatLedger, formatTokenAmount, truncateAddress } from '../utils/formatters';
 import StatusBadge from './StatusBadge';
 

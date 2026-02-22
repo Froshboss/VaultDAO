@@ -1,8 +1,8 @@
 // frontend/src/hooks/useProposals.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { useVaultContract } from './useVaultContract';
-import type { Proposal, ProposalStatus } from './useVaultContract';
+// import { useVaultContract } from './useVaultContract';
+import type { Proposal, ProposalStatus } from '../components/type';
 
 interface UseProposalsReturn {
   proposals: Proposal[];
@@ -17,7 +17,8 @@ export const useProposals = (): UseProposalsReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { getProposals } = useVaultContract();
+  // const { getProposals } = useVaultContract();
+  // TODO: Implement getProposals in useVaultContract
 
   /**
    * Fetch proposals from contract
@@ -27,8 +28,12 @@ export const useProposals = (): UseProposalsReturn => {
       setLoading(true);
       setError(null);
 
-      const data = await getProposals();
-      setProposals(data);
+      // TODO: Replace with actual contract call when getProposals is implemented
+      // const data = await getProposals();
+      // setProposals(data);
+      
+      // For now, return empty array
+      setProposals([]);
 
     } catch (err) {
       console.error('Error fetching proposals:', err);
@@ -40,7 +45,7 @@ export const useProposals = (): UseProposalsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [getProposals]);
+  }, []);
 
   /**
    * Filter proposals by status
