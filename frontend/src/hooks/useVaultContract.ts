@@ -12,6 +12,16 @@ import { signTransaction } from '@stellar/freighter-api';
 import { useWallet } from '../context/WalletContextProps';
 import { parseError } from '../utils/errorParser';
 import type { VaultActivity, GetVaultEventsResult, VaultEventType } from '../types/activity';
+import type { SimulationResult } from '../utils/simulation';
+import {
+    generateCacheKey,
+    getCachedSimulation,
+    cacheSimulation,
+    parseSimulationError,
+    extractStateChanges,
+    formatFeeBreakdown,
+    stroopsToXLM,
+} from '../utils/simulation';
 
 const CONTRACT_ID = "CDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
@@ -329,5 +339,161 @@ export const useVaultContract = () => {
         }
     };
 
-    return { proposeTransfer, rejectProposal, executeProposal, getDashboardStats, getVaultEvents, loading };
+    // Simulation functions
+    const simulateTransaction = async (
+        functionName: string,
+        args: xdr.ScVal[],
+        params?: Record<string, any>
+    ): Promise<SimulationResult> => {
+        if (!address) {
+            throw new Error("Wallet not connected");
+        }
+
+        // Check cache
+        const cacheKey = generateCacheKey({ functionName, args: args.map(a => a.toXDR('base64')), address });
+        const cached = getCachedSimulation(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        try {
+            const account = await server.getAccount(address);
+            const tx = new TransactionBuilder(account, { fee: "100" })
+                .setNetworkPassphrase(NETWORK_PASSPHRASE)
+                .setTimeout(30)
+                .addOperation(Operation.invokeHostFunction({
+                    func: xdr.HostFunction.hostFunctionTypeInvokeContract(
+                        new xdr.InvokeContractArgs({
+                            contractAddress: Address.fromString(CONTRACT_ID).toScAddress(),
+                            functionName,
+                            args,
+                        })
+                    ),
+                    auth: [],
+                }))
+                .build();
+
+            const simulation = await server.simulateTransaction(tx);
+
+            if (SorobanRpc.Api.isSimulationError(simulation)) {
+                const errorInfo = parseSimulationError(simulation);
+                const result: SimulationResult = {
+                    success: false,
+                    fee: '0',
+                    feeXLM: '0',
+                    resourceFee: '0',
+                    error: errorInfo.message,
+                    errorCode: errorInfo.code,
+                    timestamp: Date.now(),
+                };
+                cacheSimulation(cacheKey, result);
+                return result;
+            }
+
+            // Success - extract fee and state changes
+            const feeBreakdown = formatFeeBreakdown(simulation);
+            const stateChanges = extractStateChanges(simulation, functionName, params);
+
+            const result: SimulationResult = {
+                success: true,
+                fee: feeBreakdown.totalFee,
+                feeXLM: feeBreakdown.totalFeeXLM,
+                resourceFee: feeBreakdown.resourceFee,
+                stateChanges,
+                timestamp: Date.now(),
+            };
+
+            cacheSimulation(cacheKey, result);
+            return result;
+        } catch (error: any) {
+            const errorInfo = parseSimulationError(error);
+            const result: SimulationResult = {
+                success: false,
+                fee: '0',
+                feeXLM: '0',
+                resourceFee: '0',
+                error: errorInfo.message,
+                errorCode: errorInfo.code,
+                timestamp: Date.now(),
+            };
+            return result;
+        }
+    };
+
+    const simulateProposeTransfer = async (
+        recipient: string,
+        token: string,
+        amount: string,
+        memo: string
+    ): Promise<SimulationResult> => {
+        if (!address) throw new Error("Wallet not connected");
+
+        const args = [
+            new Address(address).toScVal(),
+            new Address(recipient).toScVal(),
+            new Address(token).toScVal(),
+            nativeToScVal(BigInt(amount)),
+            xdr.ScVal.scvSymbol(memo),
+        ];
+
+        return simulateTransaction('propose_transfer', args, {
+            recipient,
+            amount,
+            memo,
+        });
+    };
+
+    const simulateApproveProposal = async (proposalId: number): Promise<SimulationResult> => {
+        if (!address) throw new Error("Wallet not connected");
+
+        const args = [
+            new Address(address).toScVal(),
+            nativeToScVal(BigInt(proposalId), { type: "u64" }),
+        ];
+
+        return simulateTransaction('approve_proposal', args, { proposalId });
+    };
+
+    const simulateExecuteProposal = async (
+        proposalId: number,
+        amount?: string,
+        recipient?: string
+    ): Promise<SimulationResult> => {
+        if (!address) throw new Error("Wallet not connected");
+
+        const args = [
+            new Address(address).toScVal(),
+            nativeToScVal(BigInt(proposalId), { type: "u64" }),
+        ];
+
+        return simulateTransaction('execute_proposal', args, {
+            proposalId,
+            amount,
+            recipient,
+        });
+    };
+
+    const simulateRejectProposal = async (proposalId: number): Promise<SimulationResult> => {
+        if (!address) throw new Error("Wallet not connected");
+
+        const args = [
+            new Address(address).toScVal(),
+            nativeToScVal(BigInt(proposalId), { type: "u64" }),
+        ];
+
+        return simulateTransaction('reject_proposal', args, { proposalId });
+    };
+
+    return {
+        proposeTransfer,
+        rejectProposal,
+        executeProposal,
+        getDashboardStats,
+        getVaultEvents,
+        loading,
+        simulateProposeTransfer,
+        simulateApproveProposal,
+        simulateExecuteProposal,
+        simulateRejectProposal,
+    };
 };
