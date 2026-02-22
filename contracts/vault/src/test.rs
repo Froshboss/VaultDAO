@@ -35,6 +35,7 @@ fn test_multisig_approval() {
         weekly_limit: 10000,
         timelock_threshold: 500,
         timelock_delay: 100,
+        threshold_strategy: ThresholdStrategy::Fixed,
     };
     client.initialize(&admin, &config);
 
@@ -43,8 +44,14 @@ fn test_multisig_approval() {
     client.set_role(&admin, &signer2, &Role::Treasurer);
 
     // 1. Propose transfer
-    let proposal_id =
-        client.propose_transfer(&signer1, &user, &token, &100, &Symbol::new(&env, "test"));
+    let proposal_id = client.propose_transfer(
+        &signer1,
+        &user,
+        &token,
+        &100,
+        &Symbol::new(&env, "test"),
+        &Priority::Normal,
+    );
 
     // 2. First approval (signer1)
     client.approve_proposal(&signer1, &proposal_id);
@@ -85,12 +92,19 @@ fn test_unauthorized_proposal() {
         weekly_limit: 10000,
         timelock_threshold: 500,
         timelock_delay: 100,
+        threshold_strategy: ThresholdStrategy::Fixed,
     };
     client.initialize(&admin, &config);
 
     // Member tries to propose
-    let res =
-        client.try_propose_transfer(&member, &member, &token, &100, &Symbol::new(&env, "fail"));
+    let res = client.try_propose_transfer(
+        &member,
+        &member,
+        &token,
+        &100,
+        &Symbol::new(&env, "fail"),
+        &Priority::Normal,
+    );
 
     assert!(res.is_err());
     assert_eq!(res.err(), Some(Ok(VaultError::InsufficientRole)));
@@ -125,14 +139,21 @@ fn test_timelock_violation() {
         weekly_limit: 10000,
         timelock_threshold: 500,
         timelock_delay: 200,
+        threshold_strategy: ThresholdStrategy::Fixed,
     };
     client.initialize(&admin, &config);
 
     client.set_role(&admin, &signer1, &Role::Treasurer);
 
     // 1. Propose large transfer (600 > 500)
-    let proposal_id =
-        client.propose_transfer(&signer1, &user, &token, &600, &Symbol::new(&env, "large"));
+    let proposal_id = client.propose_transfer(
+        &signer1,
+        &user,
+        &token,
+        &600,
+        &Symbol::new(&env, "large"),
+        &Priority::Normal,
+    );
 
     // 2. Approve -> Should trigger timelock
     client.approve_proposal(&signer1, &proposal_id);

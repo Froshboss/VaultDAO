@@ -11,7 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import { useVaultContract } from '../../hooks/useVaultContract';
 
 const CopyButton = ({ text }: { text: string }) => (
-  <button 
+  <button
     onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); }}
     className="p-1 hover:bg-gray-700 rounded text-gray-400"
   >
@@ -101,7 +101,7 @@ const Proposals: React.FC = () => {
   }, []);
 
   const filteredProposals = useMemo(() => {
-    let filtered = proposals.filter((p) => {
+    const filtered = proposals.filter((p) => {
       const searchLower = activeFilters.search.toLowerCase();
       const matchesSearch =
         !activeFilters.search ||
@@ -146,8 +146,9 @@ const Proposals: React.FC = () => {
       await rejectProposal(Number(rejectingId));
       setProposals(prev => prev.map(p => p.id === rejectingId ? { ...p, status: 'Rejected' } : p));
       notify('proposal_rejected', `Proposal #${rejectingId} rejected`, 'success');
-    } catch (err: any) {
-      notify('proposal_rejected', err.message || 'Failed to reject', 'error');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reject';
+      notify('proposal_rejected', errorMessage, 'error');
     } finally {
       setShowRejectModal(false);
       setRejectingId(null);
@@ -206,16 +207,16 @@ const Proposals: React.FC = () => {
           )}
         </div>
 
-        <NewProposalModal 
-          isOpen={showNewProposalModal} 
-          loading={loading} 
+        <NewProposalModal
+          isOpen={showNewProposalModal}
+          loading={loading}
           selectedTemplateName={null} // Added required prop
-          formData={newProposalForm} 
-          onFieldChange={(f, v) => setNewProposalForm(prev => ({ ...prev, [f]: v }))} 
-          onSubmit={(e) => { e.preventDefault(); setShowNewProposalModal(false); }} 
-          onOpenTemplateSelector={() => {}} 
-          onSaveAsTemplate={() => {}} 
-          onClose={() => setShowNewProposalModal(false)} 
+          formData={newProposalForm}
+          onFieldChange={(f, v) => setNewProposalForm(prev => ({ ...prev, [f]: v }))}
+          onSubmit={(e) => { e.preventDefault(); setShowNewProposalModal(false); }}
+          onOpenTemplateSelector={() => { }}
+          onSaveAsTemplate={() => { }}
+          onClose={() => setShowNewProposalModal(false)}
         />
         <ProposalDetailModal isOpen={!!selectedProposal} onClose={() => setSelectedProposal(null)} proposal={selectedProposal} />
         <ConfirmationModal isOpen={showRejectModal} title="Reject Proposal" message="Are you sure you want to reject this?" onConfirm={handleRejectConfirm} onCancel={() => setShowRejectModal(false)} showReasonInput={true} isDestructive={true} />

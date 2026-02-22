@@ -71,6 +71,12 @@ const Settings: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold">Settings</h2>
 
+      {/* Role Management Section */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 className="text-lg font-semibold mb-4">Role Management</h3>
+        <RoleManagement />
+      </div>
+
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
         <h3 className="text-lg font-semibold mb-4">Export history</h3>
         <p className="text-gray-400 text-sm mb-4">
@@ -158,6 +164,21 @@ const Settings: React.FC = () => {
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
         <p className="text-gray-400">Configuration options will appear here.</p>
       </div>
+
+      {showCloner && (
+        <VaultCloner
+          currentConfig={currentVaultConfig}
+          onClone={handleCloneVault}
+          onClose={() => setShowCloner(false)}
+        />
+      )}
+
+      {showDeployVault && (
+        <DeployVault
+          onDeploy={handleDeployVault}
+          onClose={() => setShowDeployVault(false)}
+        />
+      )}
     </div>
   );
 };
