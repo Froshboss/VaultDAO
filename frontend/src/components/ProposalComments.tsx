@@ -103,7 +103,7 @@ const ProposalComments: React.FC<ProposalCommentsProps> = ({ proposalId, signers
     if (!newCommentText.trim() || submitting || !address) return;
     setSubmitting(true);
     try {
-      await addComment(proposalId, newCommentText, '0');
+      await addComment(Number(proposalId), newCommentText, 0);
       setNewCommentText('');
       notify('new_proposal', 'Comment added successfully', 'success');
       await fetchComments();
@@ -117,7 +117,7 @@ const ProposalComments: React.FC<ProposalCommentsProps> = ({ proposalId, signers
   const handleReply = async (parentId: string, text: string) => {
     if (!address) return;
     try {
-      await addComment(Number(proposalId), text, parentId);
+      await addComment(Number(proposalId), text, Number(parentId));
       notify('new_proposal', 'Reply added successfully', 'success');
       await fetchComments();
     } catch (err: any) {
@@ -129,7 +129,7 @@ const ProposalComments: React.FC<ProposalCommentsProps> = ({ proposalId, signers
   const handleEdit = async (commentId: string, text: string) => {
     if (!address) return;
     try {
-      await editComment(Number(commentId), text);
+      await editComment(commentId, text);
       notify('new_proposal', 'Comment updated successfully', 'success');
       await fetchComments();
     } catch (err: any) {

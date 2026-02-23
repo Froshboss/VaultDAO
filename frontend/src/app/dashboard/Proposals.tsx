@@ -11,8 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import { useVaultContract } from '../../hooks/useVaultContract';
 import { useWallet } from '../../context/WalletContextProps';
 import type { TokenInfo } from '../../constants/tokens';
-import { DEFAULT_TOKENS } from '../../constants/tokens';
-import { formatTokenBalance } from '../../utils/formatters';
+import { DEFAULT_TOKENS, formatTokenBalance } from '../../constants/tokens';
 
 interface TokenBalance {
   token: TokenInfo;
@@ -274,33 +273,33 @@ const Proposals: React.FC = () => {
     }
   };
 
-  const handleTokenSelect = (token: TokenInfo) => {
+  const _handleTokenSelect = (token: TokenInfo) => {
     setNewProposalForm(prev => ({ ...prev, token: token.address }));
     setSelectedToken(token);
   };
 
   // Find the selected token balance
-  const selectedTokenBalance = useMemo(() => {
+  const _selectedTokenBalance = useMemo(() => {
     if (!selectedToken) return null;
     return tokenBalances.find((tb: TokenBalance) => tb.token.address === selectedToken.address);
   }, [tokenBalances, selectedToken]);
 
   // Compute amount error
-  const amountError = useMemo(() => {
-    if (newProposalForm.amount && selectedTokenBalance) {
+  const _amountError = useMemo(() => {
+    if (newProposalForm.amount && _selectedTokenBalance) {
       const amount = parseFloat(newProposalForm.amount);
-      const balance = parseFloat(selectedTokenBalance.balance);
+      const balance = parseFloat(_selectedTokenBalance.balance);
 
       if (isNaN(amount)) {
         return 'Please enter a valid amount';
       } else if (amount <= 0) {
         return 'Amount must be greater than 0';
       } else if (amount > balance) {
-        return `Insufficient balance. Available: ${formatTokenBalance(balance, selectedTokenBalance.token.decimals)} ${selectedTokenBalance.token.symbol}`;
+        return `Insufficient balance. Available: ${formatTokenBalance(balance, _selectedTokenBalance.token.decimals)} ${_selectedTokenBalance.token.symbol}`;
       }
     }
     return null;
-  }, [newProposalForm.amount, selectedTokenBalance]);
+  }, [newProposalForm.amount, _selectedTokenBalance]);
 
   // Initialize selected token when tokenBalances load
   useEffect(() => {
@@ -314,7 +313,7 @@ const Proposals: React.FC = () => {
     }
   }, [selectedToken, tokenBalances]);
 
-  const handleAddCustomToken = async (address: string): Promise<TokenInfo | null> => {
+  const _handleAddCustomToken = async (address: string): Promise<TokenInfo | null> => {
     try {
       const tokenInfo = await addCustomToken?.(address);
       if (tokenInfo) {
