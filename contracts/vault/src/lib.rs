@@ -399,15 +399,15 @@ impl VaultDAO {
             return Err(VaultError::TimelockNotExpired);
         }
 
+        // Evaluate execution conditions (if any) before balance check
+        if !proposal.conditions.is_empty() {
+            Self::evaluate_conditions(&env, &proposal)?;
+        }
+
         // Check vault balance (account for insurance amount that is also held in vault)
         let balance = token::balance(&env, &proposal.token);
         if balance < proposal.amount + proposal.insurance_amount {
             return Err(VaultError::InsufficientBalance);
-        }
-
-        // Evaluate execution conditions (if any)
-        if !proposal.conditions.is_empty() {
-            Self::evaluate_conditions(&env, &proposal)?;
         }
 
         // Execute transfer
@@ -1271,7 +1271,15 @@ impl VaultDAO {
             return Err(VaultError::Unauthorized);
         }
 
+        // IPFS CID v0 is 46 chars; reject obviously invalid hashes
+        if attachment.len() < 10 {
+            return Err(VaultError::InvalidAmount);
+        }
+
         let mut attachments = storage::get_attachments(&env, proposal_id);
+        if attachments.contains(attachment.clone()) {
+            return Err(VaultError::AlreadyApproved); // duplicate attachment
+        }
         attachments.push_back(attachment);
         storage::set_attachments(&env, proposal_id, &attachments);
         storage::extend_instance_ttl(&env);
