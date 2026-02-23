@@ -6,8 +6,8 @@ use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 use crate::errors::VaultError;
 use crate::types::{
-    Comment, Config, InsuranceConfig, ListMode, NotificationPreferences, Proposal, Reputation,
-    Role, VelocityConfig,
+    Comment, Config, GasConfig, InsuranceConfig, ListMode, NotificationPreferences, Proposal,
+    Reputation, Role, VaultMetrics, VelocityConfig,
 };
 
 /// Storage key definitions
@@ -62,6 +62,10 @@ pub enum DataKey {
     SwapProposal(u64),
     /// Swap result by proposal ID -> SwapResult
     SwapResult(u64),
+    /// Gas execution limit configuration -> GasConfig
+    GasConfig,
+    /// Vault-wide performance metrics -> VaultMetrics
+    Metrics,
 }
 
 /// TTL constants (in ledgers, ~5 seconds each)
@@ -486,12 +490,16 @@ pub fn apply_reputation_decay(env: &Env, rep: &mut Reputation) {
     }
     // Move score toward neutral (500) by 5% per period
     for _ in 0..periods {
-        if rep.score > 500 {
-            let diff = rep.score - 500;
-            rep.score = rep.score.saturating_sub(diff / 20 + 1);
-        } else if rep.score < 500 {
-            let diff = 500 - rep.score;
-            rep.score = rep.score.saturating_add(diff / 20 + 1);
+        match rep.score.cmp(&500) {
+            core::cmp::Ordering::Greater => {
+                let diff = rep.score - 500;
+                rep.score = rep.score.saturating_sub(diff / 20 + 1);
+            }
+            core::cmp::Ordering::Less => {
+                let diff = 500 - rep.score;
+                rep.score = rep.score.saturating_add(diff / 20 + 1);
+            }
+            core::cmp::Ordering::Equal => {}
         }
     }
     rep.last_decay_ledger = current_ledger;
@@ -578,4 +586,68 @@ pub fn get_swap_result(env: &Env, proposal_id: u64) -> Option<SwapResult> {
     env.storage()
         .persistent()
         .get(&DataKey::SwapResult(proposal_id))
+}
+
+// ============================================================================
+// Gas Config (Issue: feature/gas-limits)
+// ============================================================================
+
+pub fn get_gas_config(env: &Env) -> GasConfig {
+    env.storage()
+        .instance()
+        .get(&DataKey::GasConfig)
+        .unwrap_or_else(GasConfig::default)
+}
+
+pub fn set_gas_config(env: &Env, config: &GasConfig) {
+    env.storage().instance().set(&DataKey::GasConfig, config);
+}
+
+// ============================================================================
+// Performance Metrics (Issue: feature/performance-metrics)
+// ============================================================================
+
+pub fn get_metrics(env: &Env) -> VaultMetrics {
+    env.storage()
+        .instance()
+        .get(&DataKey::Metrics)
+        .unwrap_or_else(VaultMetrics::default)
+}
+
+pub fn set_metrics(env: &Env, metrics: &VaultMetrics) {
+    env.storage().instance().set(&DataKey::Metrics, metrics);
+}
+
+/// Increment proposal counter in metrics
+pub fn metrics_on_proposal(env: &Env) {
+    let mut m = get_metrics(env);
+    m.total_proposals += 1;
+    m.last_updated_ledger = env.ledger().sequence() as u64;
+    set_metrics(env, &m);
+}
+
+/// Record a successful execution in metrics
+pub fn metrics_on_execution(env: &Env, gas_used: u64, execution_time_ledgers: u64) {
+    let mut m = get_metrics(env);
+    m.executed_count += 1;
+    m.total_gas_used += gas_used;
+    m.total_execution_time_ledgers += execution_time_ledgers;
+    m.last_updated_ledger = env.ledger().sequence() as u64;
+    set_metrics(env, &m);
+}
+
+/// Record a rejection in metrics
+pub fn metrics_on_rejection(env: &Env) {
+    let mut m = get_metrics(env);
+    m.rejected_count += 1;
+    m.last_updated_ledger = env.ledger().sequence() as u64;
+    set_metrics(env, &m);
+}
+
+/// Record an expiry in metrics
+pub fn metrics_on_expiry(env: &Env) {
+    let mut m = get_metrics(env);
+    m.expired_count += 1;
+    m.last_updated_ledger = env.ledger().sequence() as u64;
+    set_metrics(env, &m);
 }

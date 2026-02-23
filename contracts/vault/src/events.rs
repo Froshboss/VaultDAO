@@ -271,3 +271,39 @@ pub fn emit_rewards_claimed(env: &Env, proposal_id: u64, farm: &Address, amount:
         (farm.clone(), amount),
     );
 }
+
+// ============================================================================
+// Gas Limit Events (feature/gas-limits)
+// ============================================================================
+
+/// Emit when a proposal execution is blocked by its gas limit
+pub fn emit_gas_limit_exceeded(env: &Env, proposal_id: u64, gas_used: u64, gas_limit: u64) {
+    env.events().publish(
+        (Symbol::new(env, "gas_limit_exceeded"), proposal_id),
+        (gas_used, gas_limit),
+    );
+}
+
+/// Emit when gas configuration is updated by admin
+pub fn emit_gas_config_updated(env: &Env, admin: &Address) {
+    env.events()
+        .publish((Symbol::new(env, "gas_cfg_updated"),), admin.clone());
+}
+
+// ============================================================================
+// Performance Metrics Events (feature/performance-metrics)
+// ============================================================================
+
+/// Emit when vault-wide metrics are updated
+pub fn emit_metrics_updated(
+    env: &Env,
+    executed: u64,
+    rejected: u64,
+    expired: u64,
+    success_rate_bps: u32,
+) {
+    env.events().publish(
+        (Symbol::new(env, "metrics_updated"),),
+        (executed, rejected, expired, success_rate_bps),
+    );
+}

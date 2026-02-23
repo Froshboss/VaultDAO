@@ -200,6 +200,14 @@ pub struct Proposal {
     pub unlock_ledger: u64,
     /// Insurance amount staked by proposer (0 = no insurance). Held in vault.
     pub insurance_amount: i128,
+    /// Gas (CPU instruction) limit for execution (0 = use global config default)
+    pub gas_limit: u64,
+    /// Estimated gas used during execution (populated on execution)
+    pub gas_used: u64,
+    /// Ledger sequence at which signers were snapshotted for this proposal
+    pub snapshot_ledger: u64,
+    /// Voting power snapshot — addresses eligible to vote at creation time
+    pub snapshot_signers: Vec<Address>,
     /// Flag indicating if this is a swap proposal
     pub is_swap: bool,
 }
@@ -324,6 +332,90 @@ impl NotificationPreferences {
             notify_on_rejection: true,
             notify_on_expiry: false,
         }
+    }
+}
+
+// ============================================================================
+// Gas Limits (Issue: feature/gas-limits)
+// ============================================================================
+
+/// Per-vault gas (CPU instruction budget) configuration
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct GasConfig {
+    /// Whether gas limiting is enforced
+    pub enabled: bool,
+    /// Default gas limit applied to new proposals (0 = unlimited)
+    pub default_gas_limit: u64,
+    /// Base cost charged per execution
+    pub base_cost: u64,
+    /// Extra cost per execution condition
+    pub condition_cost: u64,
+}
+
+impl GasConfig {
+    pub fn default() -> Self {
+        GasConfig {
+            enabled: false,
+            default_gas_limit: 0,
+            base_cost: 1_000,
+            condition_cost: 500,
+        }
+    }
+}
+
+// ============================================================================
+// Performance Metrics (Issue: feature/performance-metrics)
+// ============================================================================
+
+/// Vault-wide cumulative performance metrics
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct VaultMetrics {
+    /// Total number of proposals ever created
+    pub total_proposals: u64,
+    /// Number of proposals successfully executed
+    pub executed_count: u64,
+    /// Number of proposals rejected
+    pub rejected_count: u64,
+    /// Number of proposals that expired without execution
+    pub expired_count: u64,
+    /// Cumulative ledgers elapsed from proposal creation to execution
+    pub total_execution_time_ledgers: u64,
+    /// Total gas units consumed across all executions
+    pub total_gas_used: u64,
+    /// Ledger when metrics were last updated
+    pub last_updated_ledger: u64,
+}
+
+impl VaultMetrics {
+    pub fn default() -> Self {
+        VaultMetrics {
+            total_proposals: 0,
+            executed_count: 0,
+            rejected_count: 0,
+            expired_count: 0,
+            total_execution_time_ledgers: 0,
+            total_gas_used: 0,
+            last_updated_ledger: 0,
+        }
+    }
+
+    /// Success rate in basis points (0-10000)
+    pub fn success_rate_bps(&self) -> u32 {
+        let total = self.executed_count + self.rejected_count + self.expired_count;
+        if total == 0 {
+            return 0;
+        }
+        (self.executed_count * 10_000 / total) as u32
+    }
+
+    /// Average ledgers from creation to execution (0 if none executed)
+    pub fn avg_execution_time_ledgers(&self) -> u64 {
+        if self.executed_count == 0 {
+            return 0;
+        }
+        self.total_execution_time_ledgers / self.executed_count
     }
 }
 
