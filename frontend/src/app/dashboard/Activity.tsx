@@ -1,9 +1,20 @@
 import React, { useState, useMemo } from 'react';
+import { useWallet } from '../../context/WalletContextProps';
 import type { ActivityLike } from '../../types/analytics';
-import AdvancedSearch from '../../components/AdvancedSearch';
-import { fuzzySearch, applyFilters, highlightMatch } from '../../utils/search';
-import type { FilterValue } from '../../components/SearchFilters';
-import type { FilterFieldConfig } from '../../components/SearchFilters';
+import ExportModal, { type ExportDatasets } from '../../components/modals/ExportModal';
+import { saveExportHistoryItem } from '../../utils/exportHistory';
+import AuditLog from '../../components/AuditLog';
+
+/** Define an interface for the export metadata */
+interface ExportMeta {
+  filename: string;
+  dataType: string;
+  format: string;
+  storedContent?: string;
+  mimeType?: string;
+}
+
+type ActivityTab = 'activity' | 'audit';
 
 function getMockActivities(): ActivityLike[] {
   const now = Date.now();
@@ -11,8 +22,8 @@ function getMockActivities(): ActivityLike[] {
   const activities: ActivityLike[] = [];
   const signers = ['GAAA...1111', 'GBBB...2222', 'GCCC...3333'];
   const recipients = ['GDEF...ABC1', 'GHIJ...DEF2', 'GKLM...GHI3'];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now - (29 - i) * day);
+  for (let i = 0; i < 20; i++) {
+    const d = new Date(now - (19 - i) * day);
     if (i % 3 === 0) {
       activities.push({
         id: `c-${i}`,
@@ -50,124 +61,153 @@ function getMockActivities(): ActivityLike[] {
       });
     }
   }
-  return activities;
+  return activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
-type ActivityRecord = ActivityLike & { detailsStr: string; date: string };
-
-const ACTIVITY_FILTER_FIELDS: FilterFieldConfig[] = [
-  {
-    key: 'type',
-    label: 'Type',
-    type: 'select',
-    options: [
-      { value: 'proposal_created', label: 'Proposal created' },
-      { value: 'proposal_approved', label: 'Proposal approved' },
-      { value: 'proposal_executed', label: 'Proposal executed' },
-      { value: 'proposal_rejected', label: 'Proposal rejected' },
-    ],
-  },
-  { key: 'date', label: 'Date', type: 'date_range' },
-  { key: 'actor', label: 'Actor', type: 'text', placeholder: 'Filter by signer' },
-];
+const TYPE_LABELS: Record<string, string> = {
+  proposal_created: 'Proposal Created',
+  proposal_approved: 'Proposal Approved',
+  proposal_executed: 'Proposal Executed',
+  proposal_rejected: 'Proposal Rejected',
+};
 
 const Activity: React.FC = () => {
+  const { address } = useWallet();
   const [activities] = useState<ActivityLike[]>(() => getMockActivities());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterValues, setFilterValues] = useState<FilterValue[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<ActivityTab>('activity');
 
-  const records: ActivityRecord[] = useMemo(
-    () =>
-      activities.map((a) => ({
-        ...a,
-        detailsStr: JSON.stringify(a.details),
-        date: a.timestamp.slice(0, 10),
-      })),
-    [activities]
-  );
-
-  const searchKeys = ['type', 'actor', 'timestamp', 'detailsStr'] as (keyof ActivityRecord)[];
-  const filterFieldSet = useMemo(() => new Set(ACTIVITY_FILTER_FIELDS.map((f) => f.key)), []);
-
-  const filteredActivities = useMemo(() => {
-    const fuzzy = fuzzySearch(records, searchQuery, searchKeys, { threshold: 0.4 });
-    return applyFilters(
-      fuzzy as unknown as Record<string, unknown>[],
-      filterValues,
-      filterFieldSet
-    ) as unknown as ActivityRecord[];
-  }, [records, searchQuery, filterValues, filterFieldSet]);
-
-  const formatType = (type: string) => {
-    return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  };
+  const exportDatasets: ExportDatasets = useMemo(() => {
+    const activityRows = activities.map((a) => ({
+      id: a.id,
+      type: a.type,
+      timestamp: a.timestamp,
+      actor: a.actor,
+      ...a.details,
+    }));
+    const transactionRows = activities
+      .filter((a) => a.type === 'proposal_executed')
+      .map((a) => ({
+        id: a.id,
+        type: a.type,
+        timestamp: a.timestamp,
+        actor: a.actor,
+        amount: a.details?.amount ?? 0,
+        recipient: a.details?.recipient ?? '',
+      }));
+    return {
+      proposals: [],
+      activity: activityRows,
+      transactions: transactionRows,
+    };
+  }, [activities]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold">Activity</h2>
-        <p className="text-gray-400 mt-1">Search and filter vault transactions and events.</p>
-      </div>
-
-      <AdvancedSearch<Record<string, unknown>>
-        value={searchQuery}
-        onChange={setSearchQuery}
-        filterFields={ACTIVITY_FILTER_FIELDS}
-        filterValues={filterValues}
-        onFilterChange={setFilterValues}
-        results={filteredActivities.map((a) => ({
-          id: a.id,
-          type: a.type,
-          actor: a.actor,
-          timestamp: a.timestamp,
-          details: a.detailsStr,
-        }))}
-        exportFilename="activity-search-results.csv"
-        placeholder="Search by type, actor, or details…"
-      />
-
-      <div className="space-y-4">
-        {filteredActivities.length === 0 ? (
-          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-            <div className="p-8 text-center text-gray-400">
-              <p>No activity found.</p>
-            </div>
-          </div>
-        ) : (
-          filteredActivities.map((activity) => (
-            <div
-              key={activity.id}
-              className="bg-gray-800 rounded-xl border border-gray-700 p-4 sm:p-6"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <span
-                    className="inline-block px-2 py-1 rounded text-sm font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightMatch(formatType(activity.type), searchQuery),
-                    }}
-                  />
-                  <p className="text-sm text-gray-400 mt-1">
-                    <span
-                      className="text-white font-mono"
-                      dangerouslySetInnerHTML={{
-                        __html: highlightMatch(activity.actor, searchQuery),
-                      }}
-                    />
-                    {' · '}
-                    {new Date(activity.timestamp).toLocaleString()}
-                  </p>
-                </div>
-                {Object.keys(activity.details).length > 0 && (
-                  <pre className="text-xs text-gray-500 bg-gray-900/50 p-2 rounded overflow-x-auto max-w-full">
-                    {JSON.stringify(activity.details)}
-                  </pre>
-                )}
-              </div>
-            </div>
-          ))
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-3xl font-bold">Activity & Audit</h2>
+        {activeTab === 'activity' && (
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium min-h-[44px] sm:min-h-0"
+          >
+            Export
+          </button>
         )}
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-700">
+        <button
+          onClick={() => setActiveTab('activity')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'activity'
+              ? 'border-purple-500 text-purple-400'
+              : 'border-transparent text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          Activity Feed
+        </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'audit'
+              ? 'border-purple-500 text-purple-400'
+              : 'border-transparent text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          Audit Log
+        </button>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'activity' ? (
+        <>
+          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+            {activities.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">
+                <p>No activity found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-700/50 text-gray-300">
+                      <th className="px-4 py-3 text-left font-medium">Date</th>
+                      <th className="px-4 py-3 text-left font-medium">Type</th>
+                      <th className="px-4 py-3 text-left font-medium">Actor</th>
+                      <th className="px-4 py-3 text-left font-medium">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {activities.map((a) => (
+                      <tr key={a.id} className="hover:bg-gray-700/30">
+                        <td className="px-4 py-3 text-gray-300">
+                          {new Date(a.timestamp).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-200">
+                            {TYPE_LABELS[a.type] ?? a.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-400">{a.actor}</td>
+                        <td className="px-4 py-3 text-gray-400 max-w-xs truncate">
+                          {Object.keys(a.details).length > 0
+                            ? JSON.stringify(a.details)
+                            : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <ExportModal
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            vaultName="VaultDAO"
+            vaultAddress={address ?? 'G000000000000000000000000000000000'}
+            initialDataType="activity"
+            datasets={exportDatasets}
+            onExported={(meta: ExportMeta) =>
+              saveExportHistoryItem({
+                filename: meta.filename,
+                dataType: meta.dataType,
+                format: meta.format,
+                exportedAt: new Date().toISOString(),
+                vaultName: 'VaultDAO',
+                vaultAddress: address ?? undefined,
+                storedContent: meta.storedContent,
+                mimeType: meta.mimeType,
+              })
+            }
+          />
+        </>
+      ) : (
+        <AuditLog />
+      )}
     </div>
   );
 };

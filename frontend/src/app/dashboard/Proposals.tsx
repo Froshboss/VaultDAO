@@ -1,358 +1,467 @@
-import React, { useState, useMemo } from 'react';
-import { useWallet } from '../../context/WalletContext';
-import { useVaultContract } from '../../hooks/useVaultContract';
-import ConfirmationModal from '../../components/ConfirmationModal';
-import AdvancedSearch from '../../components/AdvancedSearch';
-import { fuzzySearch, applyFilters, highlightMatch } from '../../utils/search';
-import type { FilterValue } from '../../components/SearchFilters';
-import type { FilterFieldConfig } from '../../components/SearchFilters';
+"use client";
 
-interface Proposal {
-    id: number;
-    proposer: string;
-    recipient: string;
-    amount: string;
-    token: string;
-    memo: string;
-    status: 'Pending' | 'Approved' | 'Executed' | 'Rejected' | 'Expired';
-    approvals: number;
-    threshold: number;
-    createdAt: string;
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowUpRight, Clock, SearchX, Check, Loader2 } from 'lucide-react';
+import type { NewProposalFormData } from '../../components/modals/NewProposalModal';
+import NewProposalModal from '../../components/modals/NewProposalModal';
+import ProposalDetailModal from '../../components/modals/ProposalDetailModal';
+import ConfirmationModal from '../../components/modals/ConfirmationModal';
+import ProposalFilters, { type FilterState } from '../../components/proposals/ProposalFilters';
+import { useToast } from '../../hooks/useToast';
+import { useVaultContract } from '../../hooks/useVaultContract';
+import { useWallet } from '../../context/WalletContextProps';
+
+const CopyButton = ({ text }: { text: string }) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); }}
+    className="p-1 hover:bg-gray-700 rounded text-gray-400"
+  >
+    <Clock size={14} />
+  </button>
+);
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const colors: Record<string, string> = {
+    Pending: 'bg-yellow-500/10 text-yellow-500',
+    Approved: 'bg-green-500/10 text-green-500',
+    Rejected: 'bg-red-500/10 text-red-500',
+    Executed: 'bg-blue-500/10 text-blue-500',
+  };
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-500/10 text-gray-500'}`}>
+      {status}
+    </span>
+  );
+};
+
+export interface Proposal {
+  id: string;
+  proposer: string;
+  recipient: string;
+  amount: string;
+  token: string;
+  tokenSymbol?: string;
+  memo: string;
+  status: string;
+  approvals: number;
+  threshold: number;
+  approvedBy: string[];
+  createdAt: string;
 }
 
-const PROPOSAL_FILTER_FIELDS: FilterFieldConfig[] = [
-  { key: 'status', label: 'Status', type: 'select', options: [
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Approved', label: 'Approved' },
-    { value: 'Executed', label: 'Executed' },
-    { value: 'Rejected', label: 'Rejected' },
-    { value: 'Expired', label: 'Expired' },
-  ]},
-  { key: 'token', label: 'Token', type: 'select', options: [
-    { value: 'USDC', label: 'USDC' },
-    { value: 'XLM', label: 'XLM' },
-  ]},
-  { key: 'amount', label: 'Amount', type: 'number_range' },
-  { key: 'createdAt', label: 'Created', type: 'date_range' },
-];
-
-// Mock data for demonstration
-const mockProposals: Proposal[] = [
-    {
-        id: 1,
-        proposer: 'GABC...XYZ1',
-        recipient: 'GDEF...ABC2',
-        amount: '1000',
-        token: 'USDC',
-        memo: 'Marketing budget',
-        status: 'Pending',
-        approvals: 1,
-        threshold: 3,
-        createdAt: '2024-02-15',
-    },
-    {
-        id: 2,
-        proposer: 'GABC...XYZ1',
-        recipient: 'GHIJ...DEF3',
-        amount: '500',
-        token: 'XLM',
-        memo: 'Development costs',
-        status: 'Approved',
-        approvals: 3,
-        threshold: 3,
-        createdAt: '2024-02-14',
-    },
-];
-
 const Proposals: React.FC = () => {
-    const { address, isConnected } = useWallet();
-    const { rejectProposal, loading } = useVaultContract();
-    const [proposals, setProposals] = useState<Proposal[]>(mockProposals);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterValues, setFilterValues] = useState<FilterValue[]>([]);
-    const [selectedProposal, setSelectedProposal] = useState<number | null>(null);
-    const [showRejectModal, setShowRejectModal] = useState(false);
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const { notify } = useToast();
+  const { rejectProposal, approveProposal, getTokenBalances, addCustomToken } = useVaultContract();
+  const { address } = useWallet();
 
-    const searchKeys: (keyof Proposal)[] = ['proposer', 'recipient', 'memo', 'token', 'amount', 'status', 'createdAt'];
-    const filterFieldSet = useMemo(() => new Set(PROPOSAL_FILTER_FIELDS.map((f) => f.key)), []);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  const [showNewProposalModal, setShowNewProposalModal] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  // const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
 
-    const filteredProposals = useMemo(() => {
-        const asRecords = proposals.map((p) => ({
-            id: p.id,
-            proposer: p.proposer,
-            recipient: p.recipient,
-            amount: p.amount,
-            token: p.token,
-            memo: p.memo,
-            status: p.status,
-            approvals: p.approvals,
-            threshold: p.threshold,
-            createdAt: p.createdAt,
-        }));
-        const fuzzy = fuzzySearch(asRecords, searchQuery, searchKeys, { threshold: 0.4 });
-        return applyFilters(fuzzy, filterValues, filterFieldSet).map((r) => proposals.find((p) => p.id === r.id)!).filter(Boolean);
-    }, [proposals, searchQuery, filterValues, filterFieldSet]);
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    search: '',
+    statuses: [],
+    dateRange: { from: '', to: '' },
+    amountRange: { min: '', max: '' },
+    sortBy: 'newest'
+  });
 
-    // Mock user role - in production, fetch from contract
-    const userRole = 'Admin'; // or 'Treasurer' or 'None'
+  const [newProposalForm, setNewProposalForm] = useState<NewProposalFormData>({
+    recipient: '',
+    token: 'NATIVE',
+    amount: '',
+    memo: '',
+  });
+  // const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
 
-    const canRejectProposal = (proposal: Proposal): boolean => {
-        if (!isConnected || !address) {
-            // For demo purposes, allow rejection even without wallet connection
-            // In production, this should return false
-            return true;
+  // Fetch token balances
+  useEffect(() => {
+    const fetchBalances = async () => {
+      try {
+        const balances = await getTokenBalances();
+        setTokenBalances(balances.map((b: TokenBalance) => ({ ...b, isLoading: false })));
+      } catch (error) {
+        console.error('Failed to fetch token balances:', error);
+        // Set default tokens with zero balances
+        setTokenBalances(DEFAULT_TOKENS.map(token => ({
+          token,
+          balance: '0',
+          isLoading: false,
+        })));
+      }
+    };
+    fetchBalances();
+  }, [getTokenBalances]);
+
+  useEffect(() => {
+    const fetchProposals = async () => {
+      setLoading(true);
+      try {
+        const mockData: Proposal[] = [
+          {
+            id: '1',
+            proposer: '0x123...456',
+            recipient: '0xabc...def',
+            amount: '100',
+            token: 'NATIVE',
+            tokenSymbol: 'XLM',
+            memo: 'Liquidity Pool Expansion',
+            status: 'Pending',
+            approvals: 1,
+            threshold: 3,
+            approvedBy: ['0x123...456'],
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: '2',
+            proposer: '0x789...012',
+            recipient: '0xdef...ghi',
+            amount: '250',
+            token: 'USDC',
+            memo: 'Marketing Campaign',
+            status: 'Pending',
+            approvals: 2,
+            threshold: 3,
+            approvedBy: ['0x789...012', '0xaaa...bbb'],
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: '2',
+            proposer: '0x789...012',
+            recipient: '0xdef...abc',
+            amount: '500',
+            token: 'CCW67TSZV3SUUJZYHWVPQWJ7B5BODJHYKJRC5QK7L5HHQFJGVY7H3LRL',
+            tokenSymbol: 'USDC',
+            memo: 'Marketing Campaign Budget',
+            status: 'Approved',
+            approvals: 3,
+            threshold: 3,
+            approvedBy: ['0x789...012', '0xaaa...bbb', '0xccc...ddd'],
+            createdAt: new Date(Date.now() - 86400000).toISOString()
+          },
+          {
+            id: '3',
+            proposer: '0x345...678',
+            recipient: '0xghi...jkl',
+            amount: '250',
+            token: 'NATIVE',
+            tokenSymbol: 'XLM',
+            memo: 'Community Rewards Distribution',
+            status: 'Executed',
+            approvals: 3,
+            approvedBy: ['0x345...678', '0xaaa...bbb', '0xccc...ddd'],
+            threshold: 3,
+            createdAt: new Date(Date.now() - 172800000).toISOString()
+          }
+        ];
+        setProposals(mockData);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProposals();
+  }, []);
+
+  // Filter proposals by token and other filters
+  const filteredProposals = useMemo(() => {
+    const filtered = proposals.filter((p) => {
+      // Search filter
+      const searchLower = activeFilters.search.toLowerCase();
+      const matchesSearch =
+        !activeFilters.search ||
+        p.proposer.toLowerCase().includes(searchLower) ||
+        p.recipient.toLowerCase().includes(searchLower) ||
+        p.memo.toLowerCase().includes(searchLower);
+
+      // Status filter
+      const matchesStatus =
+        activeFilters.statuses.length === 0 || activeFilters.statuses.includes(p.status);
+
+      // Amount filter
+      const amount = parseFloat(p.amount.replace(/,/g, ''));
+      const min = activeFilters.amountRange.min ? parseFloat(activeFilters.amountRange.min) : -Infinity;
+      const max = activeFilters.amountRange.max ? parseFloat(activeFilters.amountRange.max) : Infinity;
+      const matchesAmount = amount >= min && amount <= max;
+
+      // Date filter
+      const proposalDate = new Date(p.createdAt).getTime();
+      const from = activeFilters.dateRange.from ? new Date(activeFilters.dateRange.from).getTime() : -Infinity;
+      const to = activeFilters.dateRange.to ? new Date(activeFilters.dateRange.to).setHours(23, 59, 59, 999) : Infinity;
+      const matchesDate = proposalDate >= from && proposalDate <= to;
+
+      return matchesSearch && matchesStatus && matchesAmount && matchesDate;
+    });
+
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      const amtA = parseFloat(a.amount.replace(/,/g, ''));
+      const amtB = parseFloat(b.amount.replace(/,/g, ''));
+
+      switch (activeFilters.sortBy) {
+        case 'oldest': return dateA - dateB;
+        case 'highest': return amtB - amtA;
+        case 'lowest': return amtA - amtB;
+        default: return dateB - dateA;
+      }
+    });
+  }, [proposals, activeFilters]);
+
+  const handleRejectConfirm = async () => {
+    if (!rejectingId) return;
+    try {
+      await rejectProposal(Number(rejectingId));
+      setProposals(prev => prev.map(p => p.id === rejectingId ? { ...p, status: 'Rejected' } : p));
+      notify('proposal_rejected', `Proposal #${rejectingId} rejected`, 'success');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reject';
+      notify('proposal_rejected', errorMessage, 'error');
+    } finally {
+      setShowRejectModal(false);
+      setRejectingId(null);
+    }
+  };
+
+  const handleApprove = async (proposalId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!address) {
+      notify('proposal_rejected', 'Wallet not connected', 'error');
+      return;
+    }
+
+    setApprovingIds(prev => new Set(prev).add(proposalId));
+    try {
+      await approveProposal(Number(proposalId));
+      setProposals(prev => prev.map(p => {
+        if (p.id === proposalId) {
+          const newApprovals = p.approvals + 1;
+          const newApprovedBy = [...p.approvedBy, address];
+          return {
+            ...p,
+            approvals: newApprovals,
+            approvedBy: newApprovedBy,
+            status: newApprovals >= p.threshold ? 'Approved' : p.status
+          };
         }
-        // User can reject if they are the proposer or an admin
-        return proposal.proposer === address || userRole === 'Admin';
-    };
+        return p;
+      }));
+      notify('proposal_approved', `Proposal #${proposalId} approved successfully`, 'success');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to approve proposal';
+      notify('proposal_rejected', errorMessage, 'error');
+    } finally {
+      setApprovingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(proposalId);
+        return newSet;
+      });
+    }
+  };
 
-    const handleRejectClick = (proposalId: number) => {
-        setSelectedProposal(proposalId);
-        setShowRejectModal(true);
-    };
+  const handleTokenSelect = (token: TokenInfo) => {
+    setNewProposalForm(prev => ({ ...prev, token: token.address }));
+    setSelectedToken(token);
+  };
 
-    const handleRejectConfirm = async (reason?: string) => {
-        if (selectedProposal === null) return;
+  // Find the selected token balance
+  const selectedTokenBalance = useMemo(() => {
+    if (!selectedToken) return null;
+    return tokenBalances.find(tb => tb.token.address === selectedToken.address);
+  }, [tokenBalances, selectedToken]);
 
-        try {
-            // Call contract to reject proposal
-            const txHash = await rejectProposal(selectedProposal);
-            
-            // Update local state
-            setProposals(prev =>
-                prev.map(p =>
-                    p.id === selectedProposal
-                        ? { ...p, status: 'Rejected' as const }
-                        : p
-                )
-            );
+  // Compute amount error
+  const amountError = useMemo(() => {
+    if (newProposalForm.amount && selectedTokenBalance) {
+      const amount = parseFloat(newProposalForm.amount);
+      const balance = parseFloat(selectedTokenBalance.balance);
 
-            // Show success toast
-            setToast({
-                message: `Proposal #${selectedProposal} rejected successfully`,
-                type: 'success',
-            });
+      if (isNaN(amount)) {
+        return 'Please enter a valid amount';
+      } else if (amount <= 0) {
+        return 'Amount must be greater than 0';
+      } else if (amount > balance) {
+        return `Insufficient balance. Available: ${formatTokenBalance(balance, selectedTokenBalance.token.decimals)} ${selectedTokenBalance.token.symbol}`;
+      }
+    }
+    return null;
+  }, [newProposalForm.amount, selectedTokenBalance]);
 
-            console.log('Rejection reason:', reason);
-            console.log('Transaction hash:', txHash);
-        } catch (error: any) {
-            // Show error toast
-            setToast({
-                message: error.message || 'Failed to reject proposal',
-                type: 'error',
-            });
-        } finally {
-            setShowRejectModal(false);
-            setSelectedProposal(null);
-        }
-    };
+  // Initialize selected token when tokenBalances load
+  useEffect(() => {
+    if (!selectedToken && tokenBalances.length > 0) {
+      const xlmToken = tokenBalances.find(tb => tb.token.address === 'NATIVE');
+      if (xlmToken) {
+        setSelectedToken(xlmToken.token);
+      } else {
+        setSelectedToken(tokenBalances[0].token);
+      }
+    }
+  }, [selectedToken, tokenBalances]);
 
-    const handleRejectCancel = () => {
-        setShowRejectModal(false);
-        setSelectedProposal(null);
-    };
+  const handleAddCustomToken = async (address: string): Promise<TokenInfo | null> => {
+    try {
+      const tokenInfo = await addCustomToken?.(address);
+      if (tokenInfo) {
+        // Refresh token balances
+        const balances = await getTokenBalances();
+        setTokenBalances(balances.map((b: TokenBalance) => ({ ...b, isLoading: false })));
+      }
+      return tokenInfo ?? null;
+    } catch (error) {
+      console.error('Failed to add custom token:', error);
+      throw error;
+    }
+  };
 
-    // Auto-hide toast after 5 seconds
-    React.useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [toast]);
-
-    const getStatusColor = (status: Proposal['status']) => {
-        switch (status) {
-            case 'Pending':
-                return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-            case 'Approved':
-                return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-            case 'Executed':
-                return 'bg-green-500/10 text-green-400 border-green-500/20';
-            case 'Rejected':
-                return 'bg-red-500/10 text-red-400 border-red-500/20';
-            case 'Expired':
-                return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-            default:
-                return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <h2 className="text-3xl font-bold">Proposals</h2>
-                <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium min-h-[44px] sm:min-h-0">
-                    New Proposal
-                </button>
-            </div>
-
-            <AdvancedSearch<Record<string, unknown>>
-                value={searchQuery}
-                onChange={setSearchQuery}
-                filterFields={PROPOSAL_FILTER_FIELDS}
-                filterValues={filterValues}
-                onFilterChange={setFilterValues}
-                results={filteredProposals.map((p) => ({
-                    id: p.id,
-                    proposer: p.proposer,
-                    recipient: p.recipient,
-                    amount: p.amount,
-                    token: p.token,
-                    memo: p.memo,
-                    status: p.status,
-                    createdAt: p.createdAt,
-                }))}
-                exportFilename="proposals-search-results.csv"
-                placeholder="Search proposals by memo, recipient, token…"
-            />
-
-            {/* Toast Notification */}
-            {toast && (
-                <div
-                    className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg border ${
-                        toast.type === 'success'
-                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}
-                >
-                    <div className="flex items-center gap-3">
-                        <span>{toast.message}</span>
-                        <button
-                            onClick={() => setToast(null)}
-                            className="text-gray-400 hover:text-white"
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Proposals List */}
-            <div className="space-y-4">
-                {filteredProposals.length === 0 ? (
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                        <div className="p-8 text-center text-gray-400">
-                            <p>No proposals found.</p>
-                        </div>
-                    </div>
-                ) : (
-                    filteredProposals.map((proposal) => (
-                        <div
-                            key={proposal.id}
-                            className="bg-gray-800 rounded-xl border border-gray-700 p-4 sm:p-6"
-                        >
-                            {/* Mobile Layout */}
-                            <div className="space-y-4">
-                                {/* Header Row */}
-                                <div className="flex justify-between items-start gap-4">
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-white">
-                                            Proposal #{proposal.id}
-                                        </h3>
-                                        <p
-                                            className="text-sm text-gray-400 mt-1"
-                                            dangerouslySetInnerHTML={{
-                                                __html: highlightMatch(proposal.memo, searchQuery),
-                                            }}
-                                        />
-                                    </div>
-                                    <span
-                                        className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                                            proposal.status
-                                        )}`}
-                                    >
-                                        {proposal.status}
-                                    </span>
-                                </div>
-
-                                {/* Details Grid */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-gray-400">Amount:</span>
-                                        <span className="text-white ml-2 font-medium">
-                                            {proposal.amount} {proposal.token}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-400">Approvals:</span>
-                                        <span className="text-white ml-2 font-medium">
-                                            {proposal.approvals}/{proposal.threshold}
-                                        </span>
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <span className="text-gray-400">Recipient:</span>
-                                        <span
-                                            className="text-white ml-2 font-mono text-xs"
-                                            dangerouslySetInnerHTML={{
-                                                __html: highlightMatch(proposal.recipient, searchQuery),
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <span className="text-gray-400">Proposer:</span>
-                                        <span
-                                            className="text-white ml-2 font-mono text-xs"
-                                            dangerouslySetInnerHTML={{
-                                                __html: highlightMatch(proposal.proposer, searchQuery),
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-400">Created:</span>
-                                        <span className="text-white ml-2">
-                                            {proposal.createdAt}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                {proposal.status === 'Pending' && (
-                                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                                        <button className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 sm:py-2 rounded-lg font-medium transition-colors min-h-[44px] sm:min-h-0">
-                                            Approve
-                                        </button>
-                                        {canRejectProposal(proposal) && (
-                                            <button
-                                                onClick={() => handleRejectClick(proposal.id)}
-                                                disabled={loading}
-                                                className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-6 py-3 sm:py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
-                                            >
-                                                {loading && selectedProposal === proposal.id
-                                                    ? 'Rejecting...'
-                                                    : 'Reject'}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {proposal.status === 'Approved' && (
-                                    <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-3 sm:py-2 rounded-lg font-medium transition-colors min-h-[44px] sm:min-h-0">
-                                        Execute
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Confirmation Modal */}
-            <ConfirmationModal
-                isOpen={showRejectModal}
-                title="Reject Proposal"
-                message="Are you sure you want to reject this proposal? This action is permanent and cannot be undone."
-                confirmText="Reject Proposal"
-                cancelText="Cancel"
-                onConfirm={handleRejectConfirm}
-                onCancel={handleRejectCancel}
-                showReasonInput={true}
-                reasonPlaceholder="Enter rejection reason (optional)"
-                isDestructive={true}
-            />
+  return (
+    <div className="min-h-screen bg-gray-900 p-6 text-white">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Proposals</h1>
+          <button onClick={() => setShowNewProposalModal(true)} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-lg transition">
+            New Proposal
+          </button>
         </div>
-    );
+
+        <ProposalFilters proposalCount={filteredProposals.length} onFilterChange={setActiveFilters} />
+
+        <div className="mt-6 grid grid-cols-1 gap-4">
+          {filteredProposals.length > 0 ? (
+            filteredProposals.map((prop) => {
+              const isApproving = approvingIds.has(prop.id);
+              const hasUserApproved = address ? prop.approvedBy.includes(address) : false;
+              const progressPercent = (prop.approvals / prop.threshold) * 100;
+
+              return (
+                <div key={prop.id} onClick={() => setSelectedProposal(prop)} className="bg-gray-800/50 p-5 rounded-2xl border border-gray-700 hover:border-purple-500/50 cursor-pointer transition-all hover:scale-[1.01] group">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="p-3 bg-gray-900 rounded-xl text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                          <ArrowUpRight size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-white font-bold">Proposal #{prop.id}</h4>
+                            <CopyButton text={prop.recipient} />
+                          </div>
+                          <p className="text-sm text-gray-400 truncate max-w-[200px] sm:max-w-md">{prop.memo}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(prop.createdAt).toLocaleDateString()}</span>
+                            <span>• {prop.amount} {prop.token}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                        <StatusBadge status={prop.status} />
+                      </div>
+                    </div>
+
+                    {prop.status === 'Pending' && (
+                      <div className="flex flex-col gap-3 pt-3 border-t border-gray-700/50">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-gray-400">
+                                Approvals: <span className="text-white font-semibold">{prop.approvals}/{prop.threshold}</span>
+                              </span>
+                              {prop.approvals >= prop.threshold && (
+                                <span className="text-xs text-green-400 font-medium">Ready to Execute</span>
+                              )}
+                            </div>
+                            <div className="w-full bg-gray-700/30 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-gradient-to-r from-purple-500 to-purple-600 h-full rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                              />
+                            </div>
+                            {prop.approvedBy.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {prop.approvedBy.map((approver, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`text-xs px-2 py-1 rounded-full ${approver === address
+                                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                      : 'bg-gray-700/50 text-gray-400'
+                                      }`}
+                                  >
+                                    {approver.slice(0, 6)}...{approver.slice(-4)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            {address && !hasUserApproved && (
+                              <button
+                                onClick={(e) => handleApprove(prop.id, e)}
+                                disabled={isApproving}
+                                className="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                {isApproving ? (
+                                  <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check size={16} />
+                                    Approve
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {hasUserApproved && (
+                              <div className="flex-1 sm:flex-initial bg-green-500/10 text-green-400 px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 border border-green-500/30">
+                                <Check size={16} />
+                                Approved
+                              </div>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setRejectingId(prop.id); setShowRejectModal(true); }}
+                              className="flex-1 sm:flex-initial bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-800/20 rounded-3xl border border-dashed border-gray-700">
+              <SearchX size={48} className="text-gray-600 mb-4" />
+              <p className="text-gray-400 text-lg font-medium">No proposals match your filters</p>
+            </div>
+          )}
+        </div>
+
+        <NewProposalModal
+          isOpen={showNewProposalModal}
+          loading={loading}
+          selectedTemplateName={null}
+          formData={newProposalForm}
+          onFieldChange={(f, v) => setNewProposalForm(prev => ({ ...prev, [f]: v }))}
+          onSubmit={(e) => { e.preventDefault(); setShowNewProposalModal(false); }}
+          onOpenTemplateSelector={() => { }}
+          onSaveAsTemplate={() => { }}
+          onClose={() => setShowNewProposalModal(false)}
+        />
+        <ProposalDetailModal isOpen={!!selectedProposal} onClose={() => setSelectedProposal(null)} proposal={selectedProposal} />
+        <ConfirmationModal isOpen={showRejectModal} title="Reject Proposal" message="Are you sure you want to reject this?" onConfirm={handleRejectConfirm} onCancel={() => setShowRejectModal(false)} showReasonInput={true} isDestructive={true} />
+      </div>
+    </div>
+  );
 };
 
 export default Proposals;
