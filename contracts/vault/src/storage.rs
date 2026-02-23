@@ -2,10 +2,10 @@
 //!
 //! Storage keys and helper functions for persistent state.
 
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, Address, Env, Vec};
 
 use crate::errors::VaultError;
-use crate::types::{Config, Proposal, Role};
+use crate::types::{Config, Proposal, Role, VelocityConfig};
 
 /// Storage key definitions
 #[contracttype]
@@ -31,12 +31,8 @@ pub enum DataKey {
     Recurring(u64),
     /// Next recurring payment ID counter -> u64
     NextRecurringId,
-    /// Recipient list mode -> ListMode
-    ListMode,
-    /// Whitelist membership -> bool
-    Whitelist(Address),
-    /// Blacklist membership -> bool
-    Blacklist(Address),
+    /// Proposer transfer timestamps for velocity checking (Address) -> Vec<u64>
+    VelocityHistory(Address),
 }
 
 /// TTL constants (in ledgers, ~5 seconds each)
@@ -279,4 +275,37 @@ pub fn remove_from_blacklist(env: &Env, addr: &Address) {
     env.storage()
         .persistent()
         .remove(&DataKey::Blacklist(addr.clone()));
+}
+
+// ============================================================================
+// Velocity Checking (Sliding Window)
+// ============================================================================
+
+pub fn check_and_update_velocity(env: &Env, addr: &Address, config: &VelocityConfig) -> bool {
+    let now = env.ledger().timestamp();
+    let key = DataKey::VelocityHistory(addr.clone());
+
+    let history: Vec<u64> = env.storage().temporary().get(&key).unwrap_or(Vec::new(env));
+
+    // Change window_secs to window here:
+    let window_start = now.saturating_sub(config.window);
+
+    let mut updated_history: Vec<u64> = Vec::new(env);
+    for ts in history.iter() {
+        if ts > window_start {
+            updated_history.push_back(ts);
+        }
+    }
+
+    if updated_history.len() >= config.limit {
+        return false;
+    }
+
+    updated_history.push_back(now);
+    env.storage().temporary().set(&key, &updated_history);
+
+    // TTL extension for temporary storage
+    env.storage().temporary().extend_ttl(&key, 17280, 17280);
+
+    true
 }

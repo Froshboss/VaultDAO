@@ -22,6 +22,9 @@ pub struct InitConfig {
     pub timelock_threshold: i128,
     /// Delay in ledgers for timelocked proposals
     pub timelock_delay: u64,
+    pub velocity_limit: VelocityConfig,
+    /// Threshold strategy configuration
+    pub threshold_strategy: ThresholdStrategy,
 }
 
 /// Vault configuration
@@ -42,6 +45,45 @@ pub struct Config {
     pub timelock_threshold: i128,
     /// Delay in ledgers for timelocked proposals
     pub timelock_delay: u64,
+    pub velocity_limit: VelocityConfig,
+    /// Threshold strategy configuration
+    pub threshold_strategy: ThresholdStrategy,
+}
+
+/// Threshold strategy for dynamic approval requirements
+#[contracttype]
+#[derive(Clone, Debug)]
+pub enum ThresholdStrategy {
+    /// Fixed threshold (original behavior)
+    Fixed,
+    /// Percentage-based: threshold = ceil(signers * percentage / 100)
+    Percentage(u32),
+    /// Amount-based tiers: (amount_threshold, required_approvals)
+    AmountBased(Vec<AmountTier>),
+    /// Time-based: threshold reduces after time passes
+    TimeBased(TimeBasedThreshold),
+}
+
+/// Amount-based threshold tier
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct AmountTier {
+    /// Amount threshold for this tier
+    pub amount: i128,
+    /// Required approvals for this tier
+    pub approvals: u32,
+}
+
+/// Time-based threshold configuration
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct TimeBasedThreshold {
+    /// Initial threshold
+    pub initial_threshold: u32,
+    /// Reduced threshold after delay
+    pub reduced_threshold: u32,
+    /// Ledgers to wait before reduction
+    pub reduction_delay: u64,
 }
 
 /// Permissions assigned to vault participants.
@@ -122,15 +164,12 @@ pub struct RecurringPayment {
     pub is_active: bool,
 }
 
-/// Recipient list mode
+// Add this new struct to types.rs
 #[contracttype]
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[repr(u32)]
-pub enum ListMode {
-    /// No restrictions on recipients
-    Disabled = 0,
-    /// Only addresses in whitelist can receive funds
-    Whitelist = 1,
-    /// Addresses in blacklist cannot receive funds
-    Blacklist = 2,
+#[derive(Clone, Debug)]
+pub struct VelocityConfig {
+    /// Maximum number of transfers allowed in the window
+    pub limit: u32,
+    /// The time window in seconds (e.g., 3600 for 1 hour)
+    pub window: u64,
 }

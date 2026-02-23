@@ -92,7 +92,13 @@ const Overview: React.FC = () => {
         setIsLoadingBalances(true);
         try {
             const balances = await getTokenBalances();
-            setTokenBalances(balances);
+            const tokenBalancesWithLoading: TokenBalance[] = balances.map((b: TokenBalance) => ({
+                ...b,
+                isLoading: false,
+            }));
+            setTokenBalances(tokenBalancesWithLoading);
+
+            // Fetch portfolio value
             const portfolio = await getPortfolioValue();
             setPortfolioValue({ total: parseFloat(portfolio), change24h: 0 });
         } catch (error) {

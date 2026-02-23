@@ -71,13 +71,12 @@ pub enum VaultError {
     /// Insufficient vault balance
     InsufficientBalance = 601,
 
-    // Recipient list errors (7xx)
-    /// Recipient is not on the whitelist
-    RecipientNotWhitelisted = 700,
-    /// Recipient is on the blacklist
-    RecipientBlacklisted = 701,
-    /// Address already on the list
-    AddressAlreadyOnList = 702,
-    /// Address not found on the list
-    AddressNotOnList = 703,
+    VelocityLimitExceeded = 120,
+    // Condition errors (7xx)
+    /// Execution conditions not met
+    ConditionsNotMet = 700,
+    /// Balance condition not satisfied
+    BalanceConditionFailed = 701,
+    /// Date condition not satisfied
+    DateConditionFailed = 702,
 }
