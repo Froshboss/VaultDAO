@@ -52,8 +52,8 @@ fn test_multisig_approval() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // 2. First approval (signer1)
@@ -107,8 +107,8 @@ fn test_unauthorized_proposal() {
         &100,
         &Symbol::new(&env, "fail"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     assert!(res.is_err());
@@ -158,8 +158,8 @@ fn test_timelock_violation() {
         &600,
         &Symbol::new(&env, "large"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // 2. Approve -> Should trigger timelock
@@ -222,8 +222,8 @@ fn test_priority_levels() {
         &100,
         &Symbol::new(&env, "low"),
         &Priority::Low,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     let normal_id = client.propose_transfer(
         &signer1,
@@ -232,8 +232,8 @@ fn test_priority_levels() {
         &100,
         &Symbol::new(&env, "normal"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     let high_id = client.propose_transfer(
         &signer1,
@@ -242,8 +242,8 @@ fn test_priority_levels() {
         &100,
         &Symbol::new(&env, "high"),
         &Priority::High,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     let critical_id = client.propose_transfer(
         &signer1,
@@ -252,8 +252,8 @@ fn test_priority_levels() {
         &100,
         &Symbol::new(&env, "critical"),
         &Priority::Critical,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Verify priorities
@@ -308,8 +308,8 @@ fn test_get_proposals_by_priority() {
         &100,
         &Symbol::new(&env, "c1"),
         &Priority::Critical,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     let critical_id2 = client.propose_transfer(
         &signer1,
@@ -318,8 +318,8 @@ fn test_get_proposals_by_priority() {
         &100,
         &Symbol::new(&env, "c2"),
         &Priority::Critical,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Get critical proposals
@@ -371,8 +371,8 @@ fn test_change_priority() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Low,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Verify initial priority
@@ -433,8 +433,8 @@ fn test_change_priority_unauthorized() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Low,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Try to change priority as non-admin
@@ -480,8 +480,8 @@ fn test_priority_queue_cleanup_on_execution() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Critical,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Verify it's in the critical queue
@@ -536,8 +536,8 @@ fn test_abstention_basic() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Signer2 abstains
@@ -592,8 +592,8 @@ fn test_abstention_does_not_count_toward_threshold() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Signer2 abstains
@@ -655,8 +655,8 @@ fn test_cannot_vote_after_abstaining() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Signer1 abstains
@@ -704,8 +704,8 @@ fn test_cannot_abstain_after_voting() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Signer1 approves
@@ -753,8 +753,8 @@ fn test_cannot_abstain_twice() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Signer1 abstains
@@ -802,8 +802,8 @@ fn test_add_attachment() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -854,8 +854,8 @@ fn test_verify_attachment() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -909,8 +909,8 @@ fn test_remove_attachment() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -968,8 +968,8 @@ fn test_attachment_unauthorized() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -1017,8 +1017,8 @@ fn test_attachment_duplicate() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -1068,8 +1068,8 @@ fn test_attachment_invalid_hash() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Too short hash
@@ -1115,8 +1115,8 @@ fn test_admin_can_add_attachment() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let ipfs_hash =
@@ -1169,8 +1169,8 @@ fn test_fixed_threshold_strategy() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     client.approve_proposal(&signer1, &proposal_id);
@@ -1226,8 +1226,8 @@ fn test_percentage_threshold_strategy() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     client.approve_proposal(&signer1, &proposal_id);
@@ -1300,8 +1300,8 @@ fn test_amount_based_threshold_strategy() {
         &50,
         &Symbol::new(&env, "small"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     let proposal = client.get_proposal(&small_proposal);
@@ -1320,8 +1320,8 @@ fn test_amount_based_threshold_strategy() {
         &200,
         &Symbol::new(&env, "medium"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     client.approve_proposal(&signer1, &medium_proposal);
     let proposal = client.get_proposal(&medium_proposal);
@@ -1339,8 +1339,8 @@ fn test_amount_based_threshold_strategy() {
         &600,
         &Symbol::new(&env, "large"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
     client.approve_proposal(&signer1, &large_proposal);
     client.approve_proposal(&signer2, &large_proposal);
@@ -1401,8 +1401,8 @@ fn test_time_based_threshold_strategy() {
         &100,
         &Symbol::new(&env, "test"),
         &Priority::Normal,
-    &Vec::new(&env),
-    &ConditionLogic::And,
+        &Vec::new(&env),
+        &ConditionLogic::And,
     );
 
     // Initially needs 3 approvals

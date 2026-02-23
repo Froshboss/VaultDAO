@@ -4,6 +4,7 @@
 //! proposal workflows, and spending limits.
 
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
 mod errors;
 mod events;
@@ -71,7 +72,7 @@ fn evaluate_conditions(env: &Env, proposal: &Proposal) -> Result<(), VaultError>
     }
 
     let current_ledger = env.ledger().sequence() as u64;
-    
+
     let mut results = Vec::new(env);
     for condition in proposal.conditions.iter() {
         let satisfied = match condition {
