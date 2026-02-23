@@ -18,11 +18,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 // Fixed Import: Pointing to the actual hook location
-import { useWallet } from "../../hooks/useWallet"; 
+import { useWallet } from "../../hooks/useWallet";
 import CopyButton from '../CopyButton';
+import WalletSwitcher from '../WalletSwitcher';
 
 const DashboardLayout: React.FC = () => {
-  const { isConnected, address, network, connect, disconnect } = useWallet();
+  const { isConnected, address, network, connect, disconnect, availableWallets, selectedWalletId, switchWallet } = useWallet();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -125,9 +126,19 @@ const DashboardLayout: React.FC = () => {
                 )}
               </div>
             ) : (
-              <button onClick={connect} className="bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 flex items-center">
-                <Wallet size={18} className="mr-2" /> Connect Wallet
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <WalletSwitcher
+                  availableWallets={availableWallets}
+                  selectedWalletId={selectedWalletId}
+                  onSelect={(a) => switchWallet(a)}
+                />
+                <button
+                  onClick={connect}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 flex items-center min-h-[44px]"
+                >
+                  <Wallet size={18} className="mr-2" /> Connect
+                </button>
+              </div>
             )}
           </div>
         </header>
