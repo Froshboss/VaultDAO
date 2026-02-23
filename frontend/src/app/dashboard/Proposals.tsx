@@ -11,7 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import { useVaultContract } from '../../hooks/useVaultContract';
 import { useWallet } from '../../context/WalletContextProps';
 import type { TokenInfo } from '../../constants/tokens';
-import { DEFAULT_TOKENS, formatTokenBalance } from '../../constants/tokens';
+import { DEFAULT_TOKENS } from '../../constants/tokens';
 
 interface TokenBalance {
   token: TokenInfo;
@@ -59,7 +59,7 @@ export interface Proposal {
 
 const Proposals: React.FC = () => {
   const { notify } = useToast();
-  const { rejectProposal, approveProposal, getTokenBalances, addCustomToken } = useVaultContract();
+  const { rejectProposal, approveProposal, getTokenBalances } = useVaultContract();
   const { address } = useWallet();
 
   const [proposals, setProposals] = useState<Proposal[]>([]);
