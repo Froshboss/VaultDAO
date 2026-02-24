@@ -1,4 +1,5 @@
-import { lazy, ComponentType, ReactNode } from 'react';
+import { lazy } from 'react';
+import type { ComponentType } from 'react';
 
 /**
  * Lazy load a component with a fallback UI

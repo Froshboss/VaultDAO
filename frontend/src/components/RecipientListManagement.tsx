@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useVaultContract } from '../hooks/useVaultContract';
 import { useToast } from '../hooks/useToast';
-
-type ListMode = 'Disabled' | 'Whitelist' | 'Blacklist';
+import type { ListMode } from '../types';
 
 interface RecipientListManagementProps {
     onClose?: () => void;

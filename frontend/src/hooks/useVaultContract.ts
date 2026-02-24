@@ -13,6 +13,7 @@ import { useWallet } from '../context/WalletContextProps';
 import { parseError } from '../utils/errorParser';
 import type { VaultActivity, GetVaultEventsResult, VaultEventType } from '../types/activity';
 import type { SimulationResult } from '../utils/simulation';
+import type { Comment, ListMode } from '../types';
 import {
     generateCacheKey,
     getCachedSimulation,
@@ -571,6 +572,74 @@ export const useVaultContract = () => {
         return Promise.resolve();
     }, []);
 
+    // Comment management methods
+    const addComment = useCallback(async (proposalId: string, text: string, parentId: string = ''): Promise<void> => {
+        console.log('Adding comment to proposal:', proposalId, 'text:', text, 'parentId:', parentId);
+        // TODO: Implement backend integration for comment storage
+        return Promise.resolve();
+    }, []);
+
+    const editComment = useCallback(async (commentId: string, text: string): Promise<void> => {
+        console.log('Editing comment:', commentId, 'text:', text);
+        // TODO: Implement backend integration for comment updates
+        return Promise.resolve();
+    }, []);
+
+    const getProposalComments = useCallback(async (proposalId: string): Promise<Comment[]> => {
+        console.log('Getting comments for proposal:', proposalId);
+        // TODO: Implement backend integration for fetching comments
+        return Promise.resolve([]);
+    }, []);
+
+    // List mode management methods
+    const getListMode = useCallback(async (): Promise<ListMode> => {
+        console.log('Getting list mode');
+        // TODO: Implement backend integration for fetching list mode
+        return Promise.resolve('Disabled');
+    }, []);
+
+    const setListMode = useCallback(async (mode: ListMode): Promise<void> => {
+        console.log('Setting list mode to:', mode);
+        // TODO: Implement backend integration for setting list mode
+        return Promise.resolve();
+    }, []);
+
+    const addToWhitelist = useCallback(async (address: string): Promise<void> => {
+        console.log('Adding to whitelist:', address);
+        // TODO: Implement backend integration for whitelist management
+        return Promise.resolve();
+    }, []);
+
+    const removeFromWhitelist = useCallback(async (address: string): Promise<void> => {
+        console.log('Removing from whitelist:', address);
+        // TODO: Implement backend integration for whitelist management
+        return Promise.resolve();
+    }, []);
+
+    const addToBlacklist = useCallback(async (address: string): Promise<void> => {
+        console.log('Adding to blacklist:', address);
+        // TODO: Implement backend integration for blacklist management
+        return Promise.resolve();
+    }, []);
+
+    const removeFromBlacklist = useCallback(async (address: string): Promise<void> => {
+        console.log('Removing from blacklist:', address);
+        // TODO: Implement backend integration for blacklist management
+        return Promise.resolve();
+    }, []);
+
+    const isWhitelisted = useCallback(async (address: string): Promise<boolean> => {
+        console.log('Checking if whitelisted:', address);
+        // TODO: Implement backend integration for whitelist checking
+        return Promise.resolve(false);
+    }, []);
+
+    const isBlacklisted = useCallback(async (address: string): Promise<boolean> => {
+        console.log('Checking if blacklisted:', address);
+        // TODO: Implement backend integration for blacklist checking
+        return Promise.resolve(false);
+    }, []);
+
     return {
         proposeTransfer,
         approveProposal,
@@ -586,6 +655,17 @@ export const useVaultContract = () => {
         getProposalSignatures,
         remindSigner,
         exportSignatures,
+        addComment,
+        editComment,
+        getProposalComments,
+        getListMode,
+        setListMode,
+        addToWhitelist,
+        removeFromWhitelist,
+        addToBlacklist,
+        removeFromBlacklist,
+        isWhitelisted,
+        isBlacklisted,
         getTokenBalances: async () => [],
         getPortfolioValue: async () => "0",
         addCustomToken: async (_address: string) => null,

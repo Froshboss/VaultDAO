@@ -1,7 +1,8 @@
 // frontend/src/App.tsx
 
-import { BrowserRouter, Routes, Route, Suspense } from 'react-router-dom';
-import { Navigate, lazy } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import PerformanceMonitor from './components/PerformanceMonitor';
 
