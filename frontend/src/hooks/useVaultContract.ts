@@ -572,16 +572,26 @@ export const useVaultContract = () => {
         return Promise.resolve();
     }, []);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const getProposalComments = useCallback(async (_proposalId: string) => [], []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const addComment = useCallback(async (_proposalId: string, _body: string, _parentId?: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const editComment = useCallback(async (_commentId: string, _body: string) => { }, []);
     const getListMode = useCallback(async () => 'Disabled' as const, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const setListMode = useCallback(async (_mode: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const addToWhitelist = useCallback(async (_address: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const removeFromWhitelist = useCallback(async (_address: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const addToBlacklist = useCallback(async (_address: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const removeFromBlacklist = useCallback(async (_address: string) => { }, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isWhitelisted = useCallback(async (_address: string) => true, []);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isBlacklisted = useCallback(async (_address: string) => false, []);
 
     return {
@@ -612,11 +622,15 @@ export const useVaultContract = () => {
         isBlacklisted,
         getTokenBalances: async () => [],
         getPortfolioValue: async () => "0",
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         addCustomToken: async (_address: string) => null,
         getVaultBalance: async () => "0",
         getRecurringPayments: async () => [],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         getRecurringPaymentHistory: async (_id: string) => [],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         schedulePayment: async (_formData: unknown) => "1",
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         executeRecurringPayment: async (_id: string) => { },
         cancelRecurringPayment: async (_id: string) => { },
         getAllRoles: async () => [],

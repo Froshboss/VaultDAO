@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
-import type { Step } from 'react-joyride';
+import type { Step, CallBackProps as JoyrideCallbackData } from 'react-joyride';
 import { useOnboarding } from '../context/OnboardingProvider';
 import { ONBOARDING_STEPS } from '../constants/onboarding';
 import type { OnboardingStep } from '../types/onboarding';
@@ -22,7 +22,7 @@ const mapOnboardingStepsToJoyride = (steps: OnboardingStep[]): Step[] => {
           <p className="text-gray-300">{step.description}</p>
         </div>
       ),
-      placement: (step.placement as any) || 'bottom',
+      placement: (step.placement as 'bottom' | 'top' | 'left' | 'right') || 'bottom',
       disableBeacon: false,
       hideCloseButton: false,
     }));
@@ -42,11 +42,15 @@ export const ProductTour: React.FC<ProductTourProps> = ({
 
   useEffect(() => {
     if (isOnboardingActive && autoStart) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRun(true);
+    } else if (!isOnboardingActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRun(false);
     }
   }, [isOnboardingActive, autoStart]);
 
-  const handleJoyrideCallback = (data: any) => {
+  const handleJoyrideCallback = (data: JoyrideCallbackData) => {
     const { action, index, status, type } = data;
 
     if (type === EVENTS.STEP_AFTER) {

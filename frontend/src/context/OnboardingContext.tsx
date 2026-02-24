@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 export interface OnboardingStep {
@@ -157,17 +157,30 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const savedAchievements = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY);
       const completedFlag = localStorage.getItem(COMPLETED_ONBOARDING_KEY);
 
+      let newState = {
+        currentStep: 0,
+        isOnboardingActive: false,
+        completedSteps: [] as string[],
+      };
+
       if (savedState) {
         const state = JSON.parse(savedState);
-        setCurrentStep(state.currentStep || 0);
-        setIsOnboardingActive(state.isOnboardingActive || false);
-        setCompletedSteps(state.completedSteps || []);
+        newState = {
+          currentStep: state.currentStep || 0,
+          isOnboardingActive: state.isOnboardingActive || false,
+          completedSteps: state.completedSteps || [],
+        };
       }
 
+      // Batch setState calls to avoid cascading renders
+      setCurrentStep(newState.currentStep);
+      setIsOnboardingActive(newState.isOnboardingActive);
+      setCompletedSteps(newState.completedSteps);
+
       if (savedAchievements) {
-        const parsed = JSON.parse(savedAchievements);
+        const parsed = JSON.parse(savedAchievements) as Array<Achievement & { unlockedAt?: string }>;
         setAchievements(
-          parsed.map((a: any) => ({
+          parsed.map((a) => ({
             ...a,
             unlockedAt: a.unlockedAt ? new Date(a.unlockedAt) : undefined,
           }))
@@ -180,6 +193,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to load onboarding state:', error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save state to localStorage whenever it changes

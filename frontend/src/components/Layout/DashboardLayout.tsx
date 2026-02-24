@@ -190,8 +190,8 @@ const DashboardLayout: React.FC = () => {
       </div>
 
       {/* Onboarding Components */}
-      <OnboardingFlow autoStart={showOnboardingPrompt} />
-      <ProductTour autoStart={false} />
+      {showOnboardingPrompt && <OnboardingFlow onComplete={() => setShowOnboardingPrompt(false)} />}
+      <ProductTour />
 
       {/* Help Center */}
       <HelpCenter isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />

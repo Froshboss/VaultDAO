@@ -126,7 +126,7 @@ const AuditLog: React.FC = () => {
     return Array.from(types);
   }, [entries]);
 
-  const handleFilterChange = (key: keyof FilterState, value: any) => {
+  const handleFilterChange = (key: keyof FilterState, value: string | string[]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };

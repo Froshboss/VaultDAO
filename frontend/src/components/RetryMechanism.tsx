@@ -28,6 +28,7 @@ function delay(ms: number): Promise<void> {
 /**
  * Execute an async function with exponential backoff retry.
  */
+/* eslint-disable-next-line react-refresh/only-export-components */
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: RetryOptions = {}
@@ -60,6 +61,7 @@ export async function withRetry<T>(
 /**
  * Hook that runs an async action with retry and exposes loading/error/retry state.
  */
+/* eslint-disable-next-line react-refresh/only-export-components */
 export function useRetry<T>(options: RetryOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);

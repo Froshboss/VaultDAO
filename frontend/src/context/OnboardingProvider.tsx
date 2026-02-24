@@ -42,6 +42,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (stored) {
         const parsed = JSON.parse(stored) as OnboardingState;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(prev => ({
           ...prev,
           ...parsed,
@@ -53,6 +54,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       if (completed === 'true') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(prev => ({ ...prev, completedOnboarding: true }));
       }
     } catch (error) {
@@ -189,6 +191,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
   );
 };
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const useOnboarding = () => {
   const context = useContext(OnboardingContext);
   if (!context) {

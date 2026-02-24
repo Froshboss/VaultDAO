@@ -11,6 +11,7 @@ import { loadDashboardLayout } from '../../utils/dashboardTemplates';
 import type { TokenInfo } from '../../constants/tokens';
 import { isValidStellarAddress } from '../../constants/tokens';
 import { formatTokenAmount } from '../../utils/formatters';
+import type { WidgetConfig } from '../../types/dashboard';
 
 interface TokenBalance extends ImportedTokenBalance {
     token: TokenInfo;
@@ -30,8 +31,8 @@ interface DashboardStats {
 const Overview: React.FC = () => {
     const { getDashboardStats, getTokenBalances, getPortfolioValue, addCustomToken, getVaultBalance, loading } = useVaultContract();
     const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [tokenBalances, setTokenBalances] = useState<any[]>([]);
-    const [portfolioValue, setPortfolioValue] = useState<any>(null);
+    const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+    const [portfolioValue, setPortfolioValue] = useState<{ total: number; change24h: number } | null>(null);
     const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
     const [showAddTokenModal, setShowAddTokenModal] = useState(false);
     const [newTokenAddress, setNewTokenAddress] = useState('');
@@ -43,7 +44,7 @@ const Overview: React.FC = () => {
     const [balanceError, setBalanceError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [showAdvancedDashboard, setShowAdvancedDashboard] = useState(false);
-    const [savedLayout, setSavedLayout] = useState<any>(null);
+    const [savedLayout, setSavedLayout] = useState<{ widgets: WidgetConfig[] } | null>(null);
 
     const quickActionTemplates = (() => {
         const mostUsed = getMostUsedTemplates(3);
