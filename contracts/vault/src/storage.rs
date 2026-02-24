@@ -8,6 +8,7 @@ use crate::errors::VaultError;
 use crate::types::{
     Comment, Config, GasConfig, InsuranceConfig, ListMode, NotificationPreferences, Proposal,
     ProposalTemplate, Reputation, Role, VaultMetrics, VelocityConfig,
+    Reputation, RetryState, Role, VaultMetrics, VelocityConfig,
 };
 
 /// Storage key definitions
@@ -76,6 +77,8 @@ pub enum DataKey {
     NextTemplateId,
     /// Template name to ID mapping -> u64
     TemplateName(soroban_sdk::Symbol),
+    /// Retry state for a proposal -> RetryState
+    RetryState(u64),
 }
 
 /// TTL constants (in ledgers, ~5 seconds each)
@@ -795,4 +798,19 @@ pub fn template_name_exists(env: &Env, name: &soroban_sdk::Symbol) -> bool {
     env.storage()
         .instance()
         .has(&DataKey::TemplateName(name.clone()))
+// Execution Retry (Issue: feature/execution-retry)
+// ============================================================================
+
+pub fn get_retry_state(env: &Env, proposal_id: u64) -> Option<RetryState> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::RetryState(proposal_id))
+}
+
+pub fn set_retry_state(env: &Env, proposal_id: u64, state: &RetryState) {
+    let key = DataKey::RetryState(proposal_id);
+    env.storage().persistent().set(&key, state);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, PROPOSAL_TTL / 2, PROPOSAL_TTL);
 }

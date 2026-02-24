@@ -83,6 +83,17 @@ pub enum VaultError {
 
     // Bridge (consolidated)
     BridgeError = 170,
+    // DEX/AMM
+    DexNotEnabled = 160,
+    SlippageExceeded = 161,
+    PriceImpactExceeded = 162,
+    InvalidSwapParams = 163,
+    InsufficientLiquidity = 164,
+
+    // Bridge
+    BridgeNotConfigured = 171,
+    ChainNotSupported = 173,
+    ExceedsBridgeLimit = 175,
 
     // Reputation
     ReputationTooLow = 180,
@@ -92,4 +103,8 @@ pub enum VaultError {
     TemplateInactive = 191,
     TemplateNameExists = 192,
     TemplateValidationFailed = 193,
+    // Retry errors
+    MaxRetriesExceeded = 190,
+    RetryBackoffNotElapsed = 191,
+    RetryNotEnabled = 192,
 }
