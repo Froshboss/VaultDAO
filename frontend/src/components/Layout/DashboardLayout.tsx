@@ -17,11 +17,9 @@ import {
   Files,
   RefreshCw,
   AlertCircle,
-  Sun,
-  Moon,
+  HelpCircle,
 } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet";
-import { useTheme } from "../../context/ThemeContext"; // Added theme hook
 import type { WalletAdapter } from "../../adapters";
 import { WalletSwitcher } from "../WalletSwitcher";
 import CopyButton from '../CopyButton';
@@ -122,33 +120,34 @@ const DashboardLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 md:space-x-4">
-            {/* Theme Toggle Button */}
+          <div className="flex items-center space-x-4">
+            {/* Help Button */}
             <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-700 transition-all active:scale-95"
-              aria-label="Toggle Theme"
+              onClick={() => setIsHelpOpen(true)}
+              className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white"
+              aria-label="Open help center"
+              title="Help Center"
             >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              <HelpCircle size={20} />
             </button>
 
             {isConnected && address ? (
               <div className="relative">
-                <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center space-x-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 hover:border-purple-500/50 px-3 py-2 md:px-4 rounded-xl transition-all duration-200 shadow-sm">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold text-xs text-white">
+                <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center space-x-3 bg-gray-800 border border-gray-700 hover:border-purple-500/50 px-3 py-2 md:px-4 rounded-xl transition-all duration-200">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold text-xs">
                     {address.slice(0, 2)}
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider leading-none mb-1">Stellar Account</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{shortenAddress(address, 6)}</p>
+                    <p className="text-xs text-gray-400 leading-none mb-1">Stellar Account</p>
+                    <p className="text-sm font-bold">{shortenAddress(address, 6)}</p>
                   </div>
                 </button>
                 {isUserMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)}></div>
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl shadow-2xl z-20 overflow-hidden">
-                      <div className="p-4 border-b border-slate-100 dark:border-gray-700 flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white mb-3 shadow-lg">
+                    <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-20 overflow-hidden">
+                      <div className="p-4 border-b border-gray-700 flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold text-lg mb-3 shadow-lg">
                           {address.slice(0, 2)}
                         </div>
                         <div className="flex items-center gap-2 bg-slate-50 dark:bg-gray-900/50 p-2 rounded-lg w-full">
