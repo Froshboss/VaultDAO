@@ -23,7 +23,7 @@ import RoleManagement from '../../components/RoleManagement';
 import WalletComparison from '../../components/WalletComparison';
 import CopyButton from '../../components/CopyButton';
 import { useVaultContract } from '../../hooks/useVaultContract';
-import { useWallet } from '../../context/WalletContextProps';
+import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, truncateAddress } from '../../utils/formatters';
 
 /** Item with stored content for re-download (when ExportModal saves it) */

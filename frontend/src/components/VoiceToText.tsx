@@ -13,8 +13,9 @@ export default function VoiceToText({ value, onChange, placeholder, className = 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognitionClass = (window as Record<string, unknown>).SpeechRecognition || (window as Record<string, unknown>).webkitSpeechRecognition as typeof SpeechRecognition;
+    const globalWindow = globalThis as Record<string, unknown>;
+    const SpeechRecognitionClass = (globalWindow.SpeechRecognition || globalWindow.webkitSpeechRecognition) as (new () => SpeechRecognition) | undefined;
+    if (SpeechRecognitionClass) {
       const recognition = new SpeechRecognitionClass();
       recognition.continuous = false;
       recognition.interimResults = false;
