@@ -22,9 +22,9 @@ use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 use crate::errors::VaultError;
 use crate::types::{
-    Comment, Config, CrossVaultConfig, CrossVaultProposal, Dispute, Escrow, GasConfig,
-    InsuranceConfig, ListMode, NotificationPreferences, Proposal, ProposalAmendment,
-    ProposalTemplate, RecoveryProposal, Reputation, RetryState, Role, VaultMetrics, VelocityConfig,
+    Comment, Config, Escrow, GasConfig, InsuranceConfig, ListMode, NotificationPreferences,
+    Proposal, ProposalAmendment, ProposalTemplate, RecoveryProposal, Reputation, RetryState, Role,
+    Subscription, SubscriptionPayment, VaultMetrics, VelocityConfig,
 };
 
 /// Storage key definitions
@@ -97,18 +97,14 @@ pub enum DataKey {
     TemplateName(soroban_sdk::Symbol),
     /// Retry state for a proposal -> RetryState
     RetryState(u64),
-    /// Cross-vault proposal by ID -> CrossVaultProposal
-    CrossVaultProposal(u64),
-    /// Cross-vault configuration -> CrossVaultConfig
-    CrossVaultConfig,
-    /// Dispute by ID -> Dispute
-    Dispute(u64),
-    /// Dispute ID for a proposal -> u64
-    ProposalDispute(u64),
-    /// Next dispute ID counter -> u64
-    NextDisputeId,
-    /// Arbitrator addresses -> Vec<Address>
-    Arbitrators,
+    /// Subscription by ID -> Subscription
+    Subscription(u64),
+    /// Next subscription ID counter -> u64
+    NextSubscriptionId,
+    /// Subscription payments by subscription ID -> Vec<SubscriptionPayment>
+    SubscriptionPayments(u64),
+    /// Subscriber subscriptions by address -> Vec<u64>
+    SubscriberSubscriptions(Address),
     /// Escrow agreement by ID -> Escrow
     Escrow(u64),
     /// Next escrow ID counter -> u64
